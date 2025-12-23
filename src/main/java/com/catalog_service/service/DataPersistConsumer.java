@@ -15,6 +15,11 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.Map;
 
+/**
+ * DataPersistConsumer
+ * Acts as a Kafka Consumer within the Catalog Service to handle data persistence.
+ * Listens to activity events and updates the Catalog DB for record-keeping and synchronization.
+ */
 @Service
 @RequiredArgsConstructor
 public class DataPersistConsumer {
@@ -23,18 +28,25 @@ public class DataPersistConsumer {
     private final WatchSessionRepository sessionRepo;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    /**
+     * Consumes watch progress events from the "watch-events" topic.
+     * Upserts (Updates or Inserts) the watch session record to maintain an accurate history of user viewing progress.
+     */
     @KafkaListener(topics = "watch-events", groupId = "db-writer-group")
     @Transactional
     public void consumeWatchEvent(String message) {
         try {
+            // Deserializing the JSON event payload received from the Kafka broker
             Map<String, Object> data = objectMapper.readValue(message, new TypeReference<>() {});
 
             Long userId = ((Number) data.get("userId")).longValue();
             String movieId = (String) data.get("movieId");
 
+            // Retrieve existing session or initialize a new one for the specific user and movie
             WatchSession session = sessionRepo.findByUserIdAndMovieId(userId, movieId)
                     .orElse(new WatchSession());
 
+            // Updating session metadata with the latest event data
             session.setUserId(userId);
             session.setMovieId(movieId);
             session.setCurrentPositionSeconds((Integer) data.get("currentPosition"));
@@ -44,14 +56,19 @@ public class DataPersistConsumer {
             session.setDeviceType((String) data.get("deviceType"));
             session.setLastWatchedAt(LocalDateTime.parse((String) data.get("timestamp")));
 
+            // Persisting the updated session to the Catalog Database
             sessionRepo.save(session);
 
 
         } catch (Exception e) {
-            System.err.println("Hata oluştu (Watch): " + e.getMessage());
+            System.err.println("Error occurred during Watch event consumption: " + e.getMessage());
         }
     }
 
+    /**
+     * Consumes explicit feedback events from the "interaction-events" topic.
+     * Records likes, ratings, and list status to the persistent database.
+     */
     @KafkaListener(topics = "interaction-events", groupId = "db-writer-group")
     @Transactional
     public void consumeInteractionEvent(String message) {
@@ -61,6 +78,7 @@ public class DataPersistConsumer {
             Long userId = ((Number) data.get("userId")).longValue();
             String movieId = (String) data.get("movieId");
 
+            // Upsert logic for user interactions (likes/ratings)
             UserInteraction interaction = interactionRepo.findByUserIdAndMovieId(userId, movieId)
                     .orElse(new UserInteraction());
 
@@ -68,6 +86,7 @@ public class DataPersistConsumer {
             interaction.setMovieId(movieId);
             interaction.setInteractionDate(LocalDateTime.parse((String) data.get("timestamp")));
 
+            // Conditional updates based on provided payload fields (Explicit Feedback)
             if (data.get("rating") != null) interaction.setRating(((Number) data.get("rating")).doubleValue());
             if (data.get("likeStatus") != null) interaction.setLikeStatus((Integer) data.get("likeStatus"));
             if (data.get("inMyList") != null) interaction.setInMyList((Boolean) data.get("inMyList"));
@@ -75,7 +94,7 @@ public class DataPersistConsumer {
             interactionRepo.save(interaction);
 
         } catch (Exception e) {
-            System.err.println("Hata oluştu (Interaction): " + e.getMessage());
+            System.err.println("Error occurred during Interaction event consumption: " + e.getMessage());
         }
     }
 }

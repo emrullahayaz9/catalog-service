@@ -2,6 +2,7 @@ package com.catalog_service.dto;
 
 import lombok.Data;
 
+// interaction dto
 @Data
 public class InteractionRequest {
     private Long userId;

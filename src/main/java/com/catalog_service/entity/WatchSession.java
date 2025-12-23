@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
 
+// watch_sessions table
 @Entity
 @Data
 @Table(name = "watch_sessions", indexes = {

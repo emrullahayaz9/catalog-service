@@ -2,6 +2,7 @@ package com.catalog_service.dto;
 
 import lombok.Data;
 
+// WatchRequest dto
 @Data
 public class WatchRequest {
     private Long userId;

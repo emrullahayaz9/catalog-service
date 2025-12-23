@@ -5,6 +5,7 @@ import lombok.Data;
 import java.time.LocalDate;
 import java.util.List;
 
+// Movie table
 @Entity
 @Data
 @Table(name = "movies")

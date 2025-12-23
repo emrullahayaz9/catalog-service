@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
 
+// user_interactions table
 @Entity
 @Data
 @Table(name = "user_interactions", uniqueConstraints = {
